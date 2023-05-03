@@ -173,7 +173,7 @@
 		try {
 		    if (!inited) await prepare_audio();
 		    if (!recorder) {
-			throw new Error('Recorder os not defined.');
+			throw new Error('Recorder is not defined.');
 		    }
 		    header = undefined;
 		    if (streaming) {
