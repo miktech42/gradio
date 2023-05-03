@@ -92,22 +92,30 @@
 		dispatch(event, value);
 	};
 
+
+	
 	async function prepare_audio() {
 		let stream: MediaStream | null;
 
 		try {
 			stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 		} catch (err) {
-			if (err instanceof DOMException && err.name == "NotAllowedError") {
-				dispatch(
-					"error",
-					"Please allow access to the microphone for recording."
-				);
-				return;
-			} else {
-				throw err;
+			if (err instanceof DOMException) {
+			    if (err.name == "NotAllowedError") {
+			    let message = "Please allow access to the microphone for recording."
+			    alert(message);
+			    console.error(message);
+			    return;
+			} else if (err.name === "NotFoundError") {
+			    let message = "No microphone detected.";
+			    alert(message);
+			    console.error(message);
+			    return;
 			}
 		}
+		throw err;
+	}
+
 
 		if (stream == null) return;
 
@@ -163,15 +171,25 @@
 	}
 
 	async function record() {
-		recording = true;
-
-		if (!inited) await prepare_audio();
-		header = undefined;
-		if (streaming) {
-			recorder.start(STREAM_TIMESLICE);
-		} else {
-			recorder.start();
-		}
+    if (!recording) {
+        try {
+            if (!inited) await prepare_audio();
+            if (!recorder) {
+                throw new Error('Recorder is not defined.');
+            }
+            header = undefined;
+            if (streaming) {
+                recorder.start(STREAM_TIMESLICE);
+            } else {
+                recorder.start();
+            }
+            recording = true;
+        } catch (err) {
+            console.error(err);
+        }
+	    } else {
+        stop();
+    	}
 	}
 
 	onDestroy(() => {
