@@ -64,6 +64,9 @@ importers:
       polka:
         specifier: ^1.0.0-next.22
         version: 1.0.0-next.22
+      pollen:
+        specifier: ^0.0.5
+        version: 0.0.5
       pollen-css:
         specifier: ^4.6.1
         version: 4.6.1
@@ -4879,6 +4882,11 @@ packages:
       lilconfig: 2.0.6
       map-obj: 5.0.2
       prettier: 2.8.1
+    dev: false
+
+  /pollen@0.0.5:
+    resolution: {integrity: sha512-fc+k2YB15WAoEGPwEsKcvlfHzb8+x1kYRk2CWSOCLMDT8EcWNfYRI6NV0PUdZHSpjt2Cf3fc+9bPAO1ln9c1iA==}
+    engines: {node: '>=0.10'}
     dev: false
 
   /postcss-custom-media@8.0.2(postcss@8.4.6):

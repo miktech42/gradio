@@ -51,6 +51,7 @@ workspace.code-workspace
 
 # Local virtualenv for devs
 .venv*
+venv/
 
 # FRP
 gradio/frpc_*
