@@ -92,50 +92,60 @@
 		dispatch(event, value);
 	};
 
+	
 	async function prepare_audio() {
 		let stream: MediaStream | null;
 
 		try {
 			stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 		} catch (err) {
-			if (err instanceof DOMException && err.name == "NotAllowedError") {
-				dispatch(
-					"error",
-					"Please allow access to the microphone for recording."
-				);
-				return;
-			} else {
-				throw err;
+			if (err instanceof DOMException) {
+				if (err.name == "NotAllowedError") {
+					let message = "Please allow access to the microphone for recording.";
+					alert(message);
+					console.error(message);
+					return;
+				} else if (err.name === "NotFoundError") {
+					let message = "No microphone detected.";
+					alert(message);
+					console.error(message);
+					return;
+				}
 			}
+			throw err;
 		}
 
 		if (stream == null) return;
 
 		if (streaming) {
-			const [{ MediaRecorder, register }, { connect }] = await Promise.all(
-				module_promises
-			);
+			try {
+				const [{ MediaRecorder, register }, { connect }] = await Promise.all(
+					module_promises
+				);
 
-			await register(await connect());
+				await register(await connect());
 
-			recorder = new MediaRecorder(stream, { mimeType: "audio/wav" });
+				recorder = new MediaRecorder(stream, { mimeType: "audio/wav" });
 
-			async function handle_chunk(event: IBlobEvent) {
-				let buffer = await event.data.arrayBuffer();
-				let payload = new Uint8Array(buffer);
-				if (!header) {
-					header = new Uint8Array(buffer.slice(0, NUM_HEADER_BYTES));
-					payload = new Uint8Array(buffer.slice(NUM_HEADER_BYTES));
+				async function handle_chunk(event: IBlobEvent) {
+					let buffer = await event.data.arrayBuffer();
+					let payload = new Uint8Array(buffer);
+					if (!header) {
+						header = new Uint8Array(buffer.slice(0, NUM_HEADER_BYTES));
+						payload = new Uint8Array(buffer.slice(NUM_HEADER_BYTES));
+					}
+					if (pending) {
+						pending_stream.push(payload);
+					} else {
+						let blobParts = [header].concat(pending_stream, [payload]);
+						dispatch_blob(blobParts, "stream");
+						pending_stream = [];
+					}
 				}
-				if (pending) {
-					pending_stream.push(payload);
-				} else {
-					let blobParts = [header].concat(pending_stream, [payload]);
-					dispatch_blob(blobParts, "stream");
-					pending_stream = [];
-				}
+				recorder.addEventListener("dataavailable", handle_chunk);
+			} catch (err) {
+				console.error("Error initializing the MediaRecorder:", err);
 			}
-			recorder.addEventListener("dataavailable", handle_chunk);
 		} else {
 			recorder = new MediaRecorder(stream);
 
@@ -153,6 +163,7 @@
 		inited = true;
 	}
 
+
 	$: if (submit_pending_stream_on_pending_end && pending === false) {
 		submit_pending_stream_on_pending_end = false;
 		if (header && pending_stream) {
@@ -163,15 +174,25 @@
 	}
 
 	async function record() {
-		recording = true;
-
-		if (!inited) await prepare_audio();
-		header = undefined;
-		if (streaming) {
-			recorder.start(STREAM_TIMESLICE);
-		} else {
-			recorder.start();
-		}
+    if (!recording) {
+        try {
+            if (!inited) await prepare_audio();
+            if (!recorder) {
+                throw new Error('Recorder is not defined.');
+            }
+            header = undefined;
+            if (streaming) {
+                recorder.start(STREAM_TIMESLICE);
+            } else {
+                recorder.start();
+            }
+            recording = true;
+        } catch (err) {
+            console.error(err);
+        }
+	    } else {
+        stop();
+    	}
 	}
 
 	onDestroy(() => {
