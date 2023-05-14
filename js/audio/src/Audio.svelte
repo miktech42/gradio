@@ -174,19 +174,38 @@
 	async function record() {
 		if (!recording) {
 			try {
-				if (!inited) await prepare_audio();
-				if (!recorder) {
-					throw new Error("Recorder is not defined.");
-				}
-				header = undefined;
-				if (streaming) {
-					recorder.start(STREAM_TIMESLICE);
+				// Check if the MediaStreamTrack for the microphone is enabled
+				if (recorder && recorder.stream.getAudioTracks()[0].enabled) {
+					header = undefined;
+					if (streaming) {
+						recorder.start(STREAM_TIMESLICE);
+					} else {
+						recorder.start();
+					}
+					recording = true;
 				} else {
-					recorder.start();
+					// If the track is not enabled or recorder is not defined, prepare audio again
+					await prepare_audio();
+
+					if (!recorder) {
+						throw new Error("Recorder is not defined.");
+					}
+					header = undefined;
+					if (streaming) {
+						recorder.start(STREAM_TIMESLICE);
+					} else {
+						recorder.start();
+					}
+					recording = true;
 				}
-				recording = true;
 			} catch (err) {
-				console.error(err);
+				if (err instanceof Error) {
+					console.error(err.message);
+					dispatch("error", err.message);
+				} else {
+					console.error(err);
+					dispatch("error", "An unknown error occurred during recording.");
+				}
 			}
 		} else {
 			stop();
